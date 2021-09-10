@@ -1,32 +1,71 @@
 ---
 title: "HW2_kexinx"
 author: "Kexin Xie"
-date: "2021年9月10日"
+date: "Sep 10th 2021"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+```
+
+```{r}
+install.packages('data.table')
+install.packages("stargazer")
 ```
 
 ## Problem 1
 
 ## Problem 2
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+### Part A
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+### Part B
 
-```{r cars}
-summary(cars)
+** Bernoulli Distribution **
+$$ P(X=x|p)=p^x(1-p)^{1-x};\quad x=0,1; \quad 0\le p\le1$$
+
+** Binomial Distribution **
+$$ P(X=x|n,p)=\binom{n}{x}p^x(1-p)^{n-x}; \quad x=0,1,2,...,n; \quad 0\le p\le 1 $$
+
+** Chi squared Distribution **
+$$ f(x|p)=\frac{1}{\Gamma(p/2)2^{p/2}}x^{p/2-1}e^{-x/2}; \quad 0\le x\le \infty; \quad p=1,2,...$$
+
+## Problem 3
+
+## Problem 4
+
+```{r}
+library(data.table)
+covid_raw <- fread("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv")
+us <- covid_raw[covid_raw$countriesAndTerritories == 'United_States_of_America',]
+us_filtered <- us[us$month %in% c(6:7),]
+us_filtered$index <- rev(1:dim(us_filtered)[1]) 
+fit<-lm(`Cumulative_number_for_14_days_of_COVID-19_cases_per_100000`~index, data=us_filtered)
 ```
 
-## Including Plots
+### Part A
 
-You can also embed plots, for example:
+** 1 **
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+summary(us_filtered)
 ```
+
+```{r}
+library('knitr')
+kable(us_filtered)
+```
+
+We limit ourselves to 61 points, and there is no misssing datapoint.
+
+** 2 **
+```{r mylatextable, results='asis'}
+library(stargazer)
+summary(fit)
+stargazer(fit,type='text',title="Summary of Linear Model", align=TRUE)
+```
+
+
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
