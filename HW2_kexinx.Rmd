@@ -2,36 +2,71 @@
 title: "HW2_kexinx"
 author: "Kexin Xie"
 date: "Sep 10th 2021"
-output: pdf_document
+output: 
+   pdf_document:
+     latex_engine: xelatex
+header-includes: \usepackage{dcolumn}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
 ```
 
-```{r}
-install.packages('data.table')
-install.packages("stargazer")
-```
 
 ## Problem 1
 
 ## Problem 2
 
 ### Part A
+**1.** I want to learn how to use statistical software to facilitate my research, such as the management of data, files and code, etc.
+
+**2.** I want to learn how to improve code efficiency.
+
+**3.** I want to learn more advanced visualization software to make the article look more readable and attractive.
+
 
 ### Part B
 
-** Bernoulli Distribution **
+**Bernoulli Distribution**
 $$ P(X=x|p)=p^x(1-p)^{1-x};\quad x=0,1; \quad 0\le p\le1$$
 
-** Binomial Distribution **
+**Binomial Distribution**
 $$ P(X=x|n,p)=\binom{n}{x}p^x(1-p)^{n-x}; \quad x=0,1,2,...,n; \quad 0\le p\le 1 $$
 
-** Chi squared Distribution **
+**Chi squared Distribution**
 $$ f(x|p)=\frac{1}{\Gamma(p/2)2^{p/2}}x^{p/2-1}e^{-x/2}; \quad 0\le x\le \infty; \quad p=1,2,...$$
 
 ## Problem 3
+Reproducible research has become particularly important in modern research. Not only for the efficiency of future research, but also for the accurateness of current research. According to Sandve(2013), the steps to achieve repeatability research are as follows:
+
+**1.** Data storage and organization is an essential step before data analysis. The data should be stored in useful, flexible, portable, nonproprietary formats or be loaded in an automated, effective way. This includes raw data, clean analysis-ready data, and steps in between.
+
+**Comment:** I don’t know how to name the data in a simple way, and which data format is the most space-saving and the easiest for subsequent operation.
+
+**2.** Ensuring that the code is easy to read and can be reproduced for others. For instance, using the execution of programs for modifing data makes it easier to reperformed than manipulation steps and following a clean, consistent coding style make code more comprehensible.
+
+**Comment:** I always write a lot of variable code that looks tedious, and I don’t know how to make the code look concise and not verbose.
+
+**3.** Making comments on every detail that may affect the execution of the step including the name and version of the program as well as exact parameters and inputs, in the form of simple shell scripts or makefiles at the command line, or in the form of stored workflows in a workflow management system.
+
+**Comment:** I don't know how to use workflow management system.
+
+**4.** Using a version control system to track evolution of code and storing all intermediate results in standardized formats. These allow us to uncover the bugs and check the environment without the need to have all executable operational.
+
+**Comment:** I had a problem when creating the version control system that is git, but with the help of my classmates I solved the problem.
+
+**5.** Creating a dynamic conclusions document and producing reproducible tables and figures directly from code instead of manual procedures. 
+
+**Comment:** When creating dynamic files, the format conversion often fails due to some symbol problems. I need to be extra careful every time I modify the code.
+
+**6.** Providing enough details along with your textual interpretations so as to allow the exact underlying results, or at least some related results and some optionally suggestions, to be tracked down in the future.
+
+**Comment:** Interpretation and description of the results should be reasonable and convincing, combined with statistical significance and actual conditions.
+
+**7.** Providing public access to data, code, scripts, runs, and results. 
+
+**Comment:** Data and code shared on personal websites are only available as long as websites are maintained and can be difficult to transfer when researchers migrate to another domain or website provider. 
+
 
 ## Problem 4
 
@@ -46,26 +81,94 @@ fit<-lm(`Cumulative_number_for_14_days_of_COVID-19_cases_per_100000`~index, data
 
 ### Part A
 
-** 1 **
-
-```{r}
-summary(us_filtered)
-```
+**1**
 
 ```{r}
 library('knitr')
-kable(us_filtered)
+kable(summary(us_filtered),'simple')
 ```
 
 We limit ourselves to 61 points, and there is no misssing datapoint.
 
-** 2 **
+**2**
 ```{r mylatextable, results='asis'}
 library(stargazer)
 summary(fit)
-stargazer(fit,type='text',title="Summary of Linear Model", align=TRUE)
+stargazer(fit,type='latex',single.raw=TRUE,title="Summary of Linear Model", align=TRUE)
+```
+
+### Part B
+
+```{r}
+fit.diags <- broom::augment(fit)
+# residuals vs fitted
+plot(fit.diags$.fitted,fit.diags$.resid,xlab='Fitted values',
+     ylab='Residuals',main='Residuals vs Fitted')
+abline(0,0,col="gray",lty=2)
+#plot(fit,1)
+
+# Normal Q-Q
+probs<-seq(0,1,length.out = length(fit.diags$.std.resid))
+quantiles<-qnorm(probs,0,1)[order(order(fit.diags$.std.resid))] 
+     #order(order(x)) returns a rank order for the observations
+plot(quantiles,fit.diags$.std.resid,xlab='Theoretical Quantiles',
+     ylab='Standardized residuals',main='Normal Q-Q')
+y<-quantile(fit.diags$.std.resid, c(0.25,0.75),names=FALSE, na.rm = TRUE)
+x<-qnorm(c(0.25,0.75))
+abline(y[1L] - (diff(y)/diff(x))*x[1L],diff(y)/diff(x),col="gray",lty=2)
+#plot(fit,2)
+
+# scale-location
+plot(fit.diags$.fitted,sqrt(abs(fit.diags$.std.resid)),
+     xlab='Fitted values',ylab='Sqrt of Standardized Residuals',main='Scale-Location')
+#plot(fit,3)
+
+#residuals vs leverage
+plot(fit.diags$.hat,fit.diags$.std.resid,xlim=c(0,max(fit.diags$.hat)),
+     xlab='Leverage',ylab='Standardized Residuals',main='Residuals vs Leverage')
+abline(h=0,col="gray",lty=2)
+abline(v=0,col="gray",lty=2)
+#plot(fit,5)
+```
+
+### Part C
+```{r}
+par(mfrow=c(1,1),mar=rep(3,4))
+acf(fit.diags$.resid,type="correlation")
 ```
 
 
+## Problem 5
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+par(mfrow=c(2,2),mar=rep(2,4))
+# residuals vs fitted
+plot(fit.diags$.fitted,fit.diags$.resid,xlab='Fitted values',
+     ylab='Residuals',main='Residuals vs Fitted')
+abline(0,0,col="gray",lty=2)
+#plot(fit,1)
+
+# Normal Q-Q
+probs<-seq(0,1,length.out = length(fit.diags$.std.resid))
+quantiles<-qnorm(probs,0,1)[order(order(fit.diags$.std.resid))] 
+#order(order(x)) returns a rank order for the observations
+plot(quantiles,fit.diags$.std.resid,xlab='Theoretical Quantiles',
+     ylab='Standardized residuals',main='Normal Q-Q')
+y<-quantile(fit.diags$.std.resid, c(0.25,0.75),names=FALSE, na.rm = TRUE)
+x<-qnorm(c(0.25,0.75))
+abline(y[1L] - (diff(y)/diff(x))*x[1L],diff(y)/diff(x),col="gray",lty=2)
+#plot(fit,2)
+
+# scale-location
+plot(fit.diags$.fitted,sqrt(abs(fit.diags$.std.resid)),
+     xlab='Fitted values',ylab='Sqrt of Standardized Residuals',main='Scale-Location')
+#plot(fit,3)
+
+#residuals vs leverage
+plot(fit.diags$.hat,fit.diags$.std.resid,xlim=c(0,max(fit.diags$.hat)),
+     xlab='Leverage',ylab='Standardized Residuals',main='Residuals vs Leverage')
+abline(h=0,col="gray",lty=2)
+abline(v=0,col="gray",lty=2)
+#plot(fit,5)
+```
+
