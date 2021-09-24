@@ -1,0 +1,90 @@
+---
+title: "HW3_kexinx"
+author: "Kexin Xie"
+date: "Sep 23th 2021"
+header-includes:
+  - \usepackage{dcolumn}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE)
+
+if (!require("data.table")) {
+  install.packages("data.table")
+}
+library(data.table)
+
+if (!require("broom")) {
+  install.packages("broom")
+}
+library('broom')
+
+if (!require("ggplot2")) {
+  install.packages("ggplot2")
+}
+library('ggplot2')
+
+if (!require("ggpubr")) {
+  install.packages("ggpubr")
+}
+library(ggpubr)
+
+covid_raw <- fread("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv")
+us <- covid_raw[covid_raw$countriesAndTerritories == 'United_States_of_America',]
+us_filtered <- us[us$month %in% c(6:7),]
+us_filtered$index <- rev(1:dim(us_filtered)[1]) 
+fit<-lm(`Cumulative_number_for_14_days_of_COVID-19_cases_per_100000`~index, data=us_filtered)
+
+## augment the data as previous
+fit.diags <- broom::augment(fit)
+```
+
+## Problem 2
+
+## Problem 3
+
+We use ggplot2 function to create diagnostics plot.
+```{r}
+#Residual vs Fitted Plot
+prf<-ggplot(data=fit.diags, aes(x=.fitted,y=.resid))+geom_point()
+prf<-prf+geom_smooth()+geom_hline(yintercept = 0,col='red',linetype='dashed')
+prf<-prf+xlab('Fitted Values')+ylab('Residuals')
+prf<-prf+labs(title="Residual vs Fitted")+theme_bw()+theme(plot.title = element_text(hjust = 0.5))
+prf
+
+#Normal Q-Q
+probs<-seq(0,1,length.out = length(fit.diags$.std.resid))
+quantiles<-qnorm(probs,0,1)[order(order(fit.diags$.std.resid))] 
+pn<-ggplot(data=fit.diags, aes(x=quantiles,y=.std.resid))+geom_point()
+y<-quantile(fit.diags$.std.resid, c(0.25,0.75),names=FALSE, na.rm = TRUE)
+x<-qnorm(c(0.25,0.75))
+pn<-pn+geom_abline(intercept=y[1L] - (diff(y)/diff(x))*x[1L],slope=diff(y)/diff(x),col="gray",lty=2)
+pn<-pn+xlab('Theoretical Quantiles')+ylab('Standardized residuals')
+pn<-pn+labs(title="Normal Q-Q")+theme_bw()+theme(plot.title = element_text(hjust = 0.5))
+pn
+
+  
+#Scale-Location
+psl<-ggplot(data=fit.diags,aes(x=.fitted,y=sqrt(abs(.std.resid))))+geom_point()
+psl<-psl+xlab('Fitted Value')+ylab(expression(sqrt("|Standardized residuals|")))
+psl<-psl+labs(title="Scale-Location")+theme_bw()+theme(plot.title = element_text(hjust = 0.5))
+psl
+
+#Residuals vs Leverage
+prl<-ggplot(data=fit.diags, aes(x=.hat,y=.resid))+geom_point()
+prl<-prl+geom_hline(yintercept = 0,col='red',linetype='dashed')
+prl<-prl+geom_vline(xintercept = 0,col='red',linetype='dashed')
+prl<-prl+xlab('Leverage')+ylab('Standardized Residuals')
+prl<-prl+labs(title="Residuals vs Leverage")+theme_bw()+theme(plot.title = element_text(hjust = 0.5))
+prl
+```
+
+## Problem 4
+
+In problem 4, we create a single multipanel plot of four diagnostic plots using ggarrange.
+```{r}
+diag<-ggarrange(prf,pn,psl,prl,
+          ncol=2,nrow=2)
+annotate_figure(diag,top=text_grob('Diagnostic Plots',color='Black',face='bold',size=14))
+```
