@@ -1,0 +1,193 @@
+---
+title: "HW3_kexinx"
+author: "Kexin Xie"
+date: "Oct 15th 2021"
+output: 
+   pdf_document:
+     latex_engine: xelatex
+header-includes: \usepackage{dcolumn}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+
+if (!require("tidyr")) {
+  install.packages("tidyr")
+}
+library(tidyr)
+
+if (!require("dplyr")) {
+  install.packages("dplyr")
+}
+library(dplyr)
+
+if (!require("ggplot2")) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+
+if (!require("data.table")) {
+  install.packages("data.table")
+}
+library(data.table)
+```
+
+## Problem 3
+
+### Part A
+```{r}
+url<-'https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/ThicknessGauge.dat'
+thickness_raw<-read.table(url, header=F, skip=2, fill=T, stringsAsFactors = F)
+colnames(thickness_raw)<-c("part","Operator1 Time1","Operator1 Time2","Operator2 Time1","Operator2 Time2","Operator3 Time1","Operator3 Time2")
+```
+
+We can notice that the column names in the original data set are placed in the wrong position, so I renamed each column and marked the measurement time. Tidying the dataset requires first melting, and then splitting the column into two variables: Operator and Times.
+```{r}
+thickness_tidy<-thickness_raw %>% 
+                 gather(key = "Operator", value = "thickness",-part) %>% 
+                 separate(col = Operator, into = c("Operator","Times")) %>% 
+                 spread(key = Times, value = thickness)
+knitr::kable(head(thickness_tidy),format = "markdown", caption="Tidy Thickness Data")
+```
+
+Thus, the dataset is in a tidy fashion. Then, we can use functions in ggplot package to plot our tidy data.
+
+```{r}
+thickness_plot<-thickness_tidy %>%
+  gather(`Time1`, `Time2`, key = "Time", value = "thickness") %>%
+  ggplot(aes(x=Operator,y=thickness, color=Time))+geom_boxplot(outlier.shape = NA)+
+    geom_point(aes(fill = Time), size = 3, shape = 21, position = position_jitterdodge())+
+    theme_classic()
+thickness_plot
+```
+
+The boxplot above indicates that operator 3 tends to measure higher values whereas operator 1 would like to measure lower values. 
+
+
+### Part B
+```{r}
+url<-'https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/BrainandBodyWeight.dat'
+BrainandBodyWeight_raw<-read.table(url, header=F,skip=2, fill=T, stringsAsFactors = F)
+colnames(BrainandBodyWeight_raw)<-c("Body_Wt","Brain_Wt","Body_Wt","Brain_Wt","Body_Wt","Brain_Wt")
+```
+
+From the original dataset, two variables "Body weight" and "Brain weight" are listed in six columns. We should arrange the dataset into two columns to make each column contain each variable.
+
+```{r}
+BrainandBodyWeight_tidy<-rbind(BrainandBodyWeight_raw[,1:2],
+                               BrainandBodyWeight_raw[,3:4],BrainandBodyWeight_raw[,5:6])
+BrainandBodyWeight_tidy<-BrainandBodyWeight_tidy %>% na.omit()
+knitr::kable(head(BrainandBodyWeight_tidy),format = "markdown", caption="Tidy BrainandBodyWeight Data")
+```
+
+```{r}
+knitr::kable(summary(BrainandBodyWeight_tidy),format = "markdown", caption="Summary BrainandBodyWeight Data")
+```
+Then we use scatter plot and linear regression to see whether there is any relationship between Body weight and Brain weight.
+
+```{r}
+BrainandBodyWeight_plot<-BrainandBodyWeight_tidy %>%
+  filter(!Body_Wt>2000) %>%
+  ggplot(aes(x=Body_Wt,y=Brain_Wt))+geom_point()+geom_smooth(method='lm')+theme_classic()
+BrainandBodyWeight_plot
+```
+We can notice that there are some outliers far away from the most data points. Looking at the original data, these outliers may be caused by the different units.
+
+### Part C
+```{r}
+url<-'http://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/LongJumpData.dat'
+LongJump_raw<-fread(url, header=F,skip=1,fill=T, stringsAsFactors = F)
+```
+Just like data in part b, we should rearrange the data from 8 columns to 2 columns and reformat the values of Year to make it readable for readers.
+
+```{r}
+LongJump_raw<-as.data.frame(LongJump_raw)
+colnames(LongJump_raw)<-c("Year","Long_jump","Year","Long_jump","Year","Long_jump","Year","Long_jump")
+LongJump_tidy<-rbind(LongJump_raw[,1:2],LongJump_raw[,3:4],LongJump_raw[,5:6],LongJump_raw[,7:8])
+LongJump_tidy<-LongJump_tidy%>%na.omit()%>%
+     mutate(Year=Year+1900)
+knitr::kable(head(LongJump_tidy),format = "markdown", caption="Tidy LongJump Data")
+```
+```{r}
+knitr::kable(summary(LongJump_tidy),format = "markdown", caption="Summary LongJump Data")
+```
+The relationship between year and long jump tends to linear.
+```{r}
+LongJump_plot<-LongJump_tidy %>%
+  ggplot(aes(x=Year,y=Long_jump))+geom_point()+geom_smooth(method='lm')+theme_classic()
+LongJump_plot
+```
+
+### Part D
+
+```{r,warning=FALSE}
+url<-'http://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/tomato.dat'
+tomato_raw<-fread(url,  header=FALSE, sep=" ", sep2=",", skip=-1)
+```
+For this tomato data, we first separate the data in one columns to three columns and then combine the temporary tables together. To tidy the table, we also use gather to melt the data, and then splitting rename columns as Variety, Yield and Density.
+```{r}
+tomato_tidy1<-tomato_raw[,1:2] %>% separate(col='V2',into=c("y1", "y2", "y3"),sep=',',remove=TRUE) %>%
+              mutate(Density=rep(10000,2))
+tomato_tidy2<-tomato_raw[,c(1,3)] %>% separate(col='V3',into=c("y1", "y2", "y3"),sep=',',remove=TRUE) %>%
+              mutate(Density=rep(20000,2))
+tomato_tidy3<-tomato_raw[,c(1,4)] %>% separate(col='V4',into=c("y1", "y2", "y3"),sep=',',remove=TRUE) %>%
+              mutate(Density=rep(30000,2))
+tomato_tidy<-rbind(tomato_tidy1,tomato_tidy2,tomato_tidy3)
+tomato_tidy<-tomato_tidy %>% rename(c("Variety" =  "V1")) %>% 
+               gather(key=Times,value=Yield,c(y1,y2,y3))%>%
+               arrange(Variety,Density) %>% select(-Times) %>%
+               mutate(Yield=as.numeric(Yield), Variety=as.factor(Variety))
+knitr::kable(head(tomato_tidy),format = "markdown", caption="Tidy Tomato Data")
+```
+
+```{r}
+knitr::kable(summary(tomato_tidy), caption="Summary Tomato Data")
+```
+
+From the scatter plot, it's easy to notice that the tomato yields increases as the planting densities increasing in both two varieties of tomato. Moreover, the first variety of tomato is always having higher yields than the other one.
+
+```{r}
+# plot
+tomato_plot<-tomato_tidy %>%
+  ggplot(aes(x=Variety,y=Yield,group=Variety, color=Variety))+
+  geom_point(aes(fill = Variety), size = 2, shape = 21)+
+  facet_grid(~factor(Density))+theme_classic()
+tomato_plot
+```
+
+
+### Part E
+```{r}
+url<-'https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/LarvaeControl.dat'
+LarvaeControl_raw<-fread(url,  header=TRUE, sep=" ", sep2=",", skip=1)
+```
+
+To tidy this data, we should rename the columns, combine the temporary tables togather and then melt the table. 
+
+```{r}
+LarvaeControl_tidy1<-LarvaeControl_raw[,2:6] %>%
+  rename("Treatment1"=`1`,"Treatment2"=`2`,"Treatment3"=`3`,"Treatment4"=`4`,"Treatment5"=`5`)%>%
+  mutate(Age=rep(1,8))
+LarvaeControl_tidy2<-LarvaeControl_raw[,7:11] %>%
+  rename("Treatment1"=`\t1`,"Treatment2"=`2`,"Treatment3"=`3`,"Treatment4"=`4`,"Treatment5"=`5`)%>%
+  mutate(Age=rep(2,8))
+LarvaeControl_tidy<-rbind(LarvaeControl_tidy1,LarvaeControl_tidy2)
+LarvaeControl_tidynew<-LarvaeControl_tidy %>% gather(key=Treatment, value=Counts,-Age)
+knitr::kable(head(LarvaeControl_tidynew),format = "markdown", caption="Tidy LarvaeControl Data")
+```
+
+```{r}
+knitr::kable(summary(LarvaeControl_tidynew),format = "markdown", caption="Summary LarvaeControl Data")
+```
+
+```{r}
+# Plot
+LarvaeControl_plot<-LarvaeControl_tidynew %>%
+  ggplot(aes(x=Treatment,y=Counts,color=as.factor(Age)))+geom_boxplot()+
+  geom_point(aes(fill = as.factor(Age)), size = 3, shape = 21, position = position_jitterdodge())+
+  theme_classic()
+LarvaeControl_plot
+```
+
+As shown in the boxplot, larvae in age group 2 have higher numbers.
+
